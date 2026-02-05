@@ -21,6 +21,8 @@ unsigned char sprites[80] = {
     0xf0, 0x80, 0xf0, 0x80, 0x80, // F
 };
 
+unsigned char hardcoded_memory[2] = {0x00, 0xe0};
+
 // initialize all variables
 void initialize(chip8_t *chip8) {
     chip8->PC = 0x200;	// all chip8 programs start at 0x200, so set PC to point in that address
@@ -33,6 +35,9 @@ void initialize(chip8_t *chip8) {
     // load fontset on memory
     memcpy(&chip8->memory[0x000], sprites, sizeof(sprites));
 
+    // *** hardcoded memory ***
+    memcpy(&chip8->memory[0x200], hardcoded_memory, sizeof(hardcoded_memory));
+
     memset(&chip8->V, 0, sizeof(chip8->V));
     memset(&chip8->stack, 0, sizeof(chip8->stack));
     memset(&chip8->screen, 0, sizeof(chip8->screen));
@@ -40,11 +45,115 @@ void initialize(chip8_t *chip8) {
 
 // in a cycle the system should:
 // 1.- fetch
+// ------------------------------------------------------------------------------------
+// During the fetch, the system will fetch one opcode from the memory at the location 
+// specified by the PC. Data is stored in an array in which each address contains one byte. 
+// As one opcode is 2 bytes long, we will need to fetch two seccessive bytes and merge them 
+// to get the actual opcode
+//
+// memory[PC] = 0xA2
+// memory[PC+1] = 0xF0
+//
+// In order to merge both bytes and store them in an unsigned short (2 bytes datatype) 
+// we will use the bitwise OR operation:
+//
+// opcode = memory[PC] << 8 | memory[PC+1];
+//
+// So what did actually happen? First we shifted 0xA2 left 8 bits, which adds 8 zeros. 
+//
+// 0xA2		0xA2 << 8 = 0xA200	HEX
+// 10100010	1010001000000000	BIN
+//
+// Next we use the bitwise OR operation to merge them: 
+//
+// 1010001000000000 | // 0xA200
+//         11110000 = // 0xF0 (0x00F0)
+// ------------------
+// 1010001011110000   // 0xA2F0
+// ------------------------------------------------------------------------------------
+//
 // 2.- decode
+// ------------------------------------------------------------------------------------
+// As we have stored our current opcode, we need to decode the opcode and check the opcode 
+// table to see what it means. We will continue with the same opcode
+//
+// 0xA2F0 // assembly: mvi 2F0h
+//
+// If we take a look at the opcode table, it tells us the following:
+//
+// - ANNN: Sets I to the address NNN
+//
+// We will need to set index register I to the value of NNN (0x2F0) 
+// ------------------------------------------------------------------------------------
+//
 // 3.- execute
+// ------------------------------------------------------------------------------------
+// Now that we know what to do with the opcode, we can execute the opcode in our emualator. 
+// For our example instruction 0xA2F0 it means that we need to sotre the value 0x2F0 
+// into index register I. As only 12 bits are containing the value we need to store, we 
+// use bitwise AND operator (&) to get rid of the first four bits (nibble)
+//
+// 1010001011110000 & // 0xA2F0 (opcode)
+// 0000111111111111 = // 0x0FFF
+// ------------------
+// 0000001011110000   // 0x02F0 (0x2F0) 
+//
+// Resulting code: 
+//
+// I = opcode & 0x0FFF; 
+// pc += 2; 
+//
+// Because every instruction is 2 bytes long, we need to increment the program counter by 
+// two after every executed opcode. This is true unless you jump to a certain address 
+// in the memory or if you call a subroutine (in which case you need to store the program 
+// counter in the stack). If the next opcode should be skipped, increase the program 
+// counter by four.
+// ------------------------------------------------------------------------------------
 void emulateCycle(chip8_t *chip8) {
-    //printf("mem index: %04hu - index hex value: 0x%04hX\n", chip8->PC, chip8->PC);
-    printf("mem index: %hu - index hex value: 0x%hx\n", chip8->PC, chip8->PC);
+    chip8->opcode = chip8->memory[chip8->PC] << 8 | chip8->memory[chip8->PC+1];
+    unsigned short index = chip8->memory[chip8->PC] >> 4;
+
+    // every opcode starts with a different and unique number, just compare the index
+    switch (index) {
+	case 0x0:
+	    printf("opcode recibido: %hx\n", chip8->opcode);
+	    if(chip8->opcode == 0x00E0) {
+		printf("00E0 - CLS | Clear the display\n");
+	    } else if (chip8->opcode == 0x00EE) {
+		// the interpreter sets the PC to the address at the top of the stack
+		// then subtracts 1 from the stack pointer
+		printf("00EE - RET | Return from a subroutine\n");
+	    }
+	    break;
+	case 0x1:
+	    printf("1nnn - JP addr | The interpreter sets the program counter to nnn\n");
+	    printf("opcode recibido: %hx\n", chip8->opcode);
+	    chip8->PC = chip8->opcode & 0x0FFF;
+	    printf("CHIP8 PC: 0x%hx\n", chip8->PC);
+	    break;
+	case 0x00EE:
+	    printf("return from subroutine\n");
+	    break;
+	// 1NNN - JP addr
+	// Jump to location nnn | The interpreter sets the PC to nnn
+	case 0x1234:
+	    printf("jump to location nnn - PC before change: 0x%hX\n", chip8->PC);
+	    break;
+    }
+
+
+
+
+
+
+
+
+
+
+    //printf("que valor hay en memoria en la direccion de PC: 0x%hhx\n", chip8->memory[chip8->PC]);
+    //printf("que valor hay en memoria en la direccion de PC+1: 0x%02hhx\n", chip8->memory[chip8->PC+1]);
+    //printf("que es PC: 0x%hx\n", chip8->PC);
+    //printf("que es PC+1: 0x%hx\n", chip8->PC+1);
     //chip8->opcode = chip8->memory[chip8->PC];
     //printf("%hu\n", chip8->opcode);
 }
