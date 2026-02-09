@@ -21,7 +21,7 @@ unsigned char sprites[80] = {
     0xf0, 0x80, 0xf0, 0x80, 0x80, // F
 };
 
-unsigned char hardcoded_memory[2] = {0x00, 0xe0};
+unsigned char hardcoded_memory[2] = {0x30, 0x11};
 
 // initialize all variables
 void initialize(chip8_t *chip8) {
@@ -41,6 +41,8 @@ void initialize(chip8_t *chip8) {
     memset(&chip8->V, 0, sizeof(chip8->V));
     memset(&chip8->stack, 0, sizeof(chip8->stack));
     memset(&chip8->screen, 0, sizeof(chip8->screen));
+
+    chip8->V[0] = 0x11;
 }
 
 // in a cycle the system should:
@@ -111,33 +113,66 @@ void initialize(chip8_t *chip8) {
 // ------------------------------------------------------------------------------------
 void emulateCycle(chip8_t *chip8) {
     chip8->opcode = chip8->memory[chip8->PC] << 8 | chip8->memory[chip8->PC+1];
-    unsigned short index = chip8->memory[chip8->PC] >> 4;
 
+    // *******************************************************************************
+    // Because every instruction is 2 bytes long, we need to increment the program 
+    // counter by two after every executed opcode. This is true unless you jump to a 
+    // certain address in the memory or if you call a subroutine.
+    // *******************************************************************************
+    //
     // every opcode starts with a different and unique number, just compare the index
-    switch (index) {
+    switch (chip8->opcode & 0xF000) {
 	case 0x0:
 	    printf("opcode recibido: %hx\n", chip8->opcode);
 	    if(chip8->opcode == 0x00E0) {
 		printf("00E0 - CLS | Clear the display\n");
+		chip8->PC += 2;
+		break;
 	    } else if (chip8->opcode == 0x00EE) {
 		// the interpreter sets the PC to the address at the top of the stack
 		// then subtracts 1 from the stack pointer
 		printf("00EE - RET | Return from a subroutine\n");
+		chip8->PC += 2;
+		break;
 	    }
 	    break;
-	case 0x1:
+	case 0x1000:
 	    printf("1nnn - JP addr | The interpreter sets the program counter to nnn\n");
 	    printf("opcode recibido: %hx\n", chip8->opcode);
 	    chip8->PC = chip8->opcode & 0x0FFF;
 	    printf("CHIP8 PC: 0x%hx\n", chip8->PC);
 	    break;
-	case 0x00EE:
-	    printf("return from subroutine\n");
+	case 0x2000:
+	    // the interpreter increments the stack pointer, then puts the current PC on
+	    // the top of the stack. The PC is then set to nnn
+	    printf("2nnn - CALL addr | Call subroutine at nnn\n");
+	    chip8->SP++;
+	    chip8->stack[chip8->SP] = chip8->PC;
+	    chip8->PC = chip8->opcode & 0x0FFF;
 	    break;
-	// 1NNN - JP addr
-	// Jump to location nnn | The interpreter sets the PC to nnn
-	case 0x1234:
-	    printf("jump to location nnn - PC before change: 0x%hX\n", chip8->PC);
+	case 0x3000:
+	    // the interpreter compares register Vx to kk, and if they are equal, increments 
+	    // the PC by 2
+	    printf("3xnn - SE Vx, byte | Skip next instruction if Vx = nn\n");
+	    printf("%x\n", chip8->V[chip8->opcode & 0x0F00]);
+	    printf("%x\n", chip8->opcode & 0x00FF);
+	    if(chip8->V[chip8->opcode & 0x0F00] == (chip8->opcode & 0x00FF)) {
+		chip8->PC += 2;
+		printf("PC incremented\n");
+	    }
+	    chip8->PC += 2;
+	    break;
+	case 0x4000:
+	    // the interpreter compares register Vx to nn, and if they are not equal, 
+	    // increments the PC by 2
+	    printf("4xnn - SNE Vx, byte | Skip next instruction if Vx = nn\n");
+	    printf("%x\n", chip8->V[chip8->opcode & 0x0F00]);
+	    printf("%x\n", chip8->opcode & 0x00FF);
+	    if (chip8->V[chip8->opcode & 0xF00] != (chip8->opcode & 0x00FF)) {
+		chip8->PC += 2;
+		printf("PC incremented\n");
+	    }
+	    chip8->PC += 2;
 	    break;
     }
 
