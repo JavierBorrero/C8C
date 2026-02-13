@@ -122,6 +122,8 @@ void emulateCycle(chip8_t *chip8) {
     //
     // every opcode starts with a different and unique number, just compare the index
     switch (chip8->opcode & 0xF000) {
+	// better to increase PC here instead of in every opcode
+	chip8->PC += 2;
 	case 0x0:
 	    printf("opcode recibido: %hx\n", chip8->opcode);
 	    if(chip8->opcode == 0x00E0) {
@@ -132,7 +134,6 @@ void emulateCycle(chip8_t *chip8) {
 		// the interpreter sets the PC to the address at the top of the stack
 		// then subtracts 1 from the stack pointer
 		printf("00EE - RET | Return from a subroutine\n");
-		chip8->PC += 2;
 		break;
 	    }
 	    break;
@@ -160,7 +161,6 @@ void emulateCycle(chip8_t *chip8) {
 		chip8->PC += 2;
 		printf("PC incremented\n");
 	    }
-	    chip8->PC += 2;
 	    break;
 	case 0x4000:
 	    // the interpreter compares register Vx to nn, and if they are not equal, 
@@ -172,7 +172,28 @@ void emulateCycle(chip8_t *chip8) {
 		chip8->PC += 2;
 		printf("PC incremented\n");
 	    }
-	    chip8->PC += 2;
+	    break;
+	case 0x5000:
+	    // compare register Vx to register Vy, and if they are equal, increments 
+	    // the PC by 2
+	    printf("5xy0 - SE Vx, Vy | Skip the next instruction if Vx = Vy\n");
+	    printf("%x\n", chip8->V[chip8->opcode & 0x0F00]);
+	    printf("%x\n", chip8->V[chip8->opcode & 0x00F0]);
+	    if(chip8->V[chip8->opcode & 0x0F00] == chip8->V[chip8->opcode & 0x00F0]) {
+		chip8->PC += 2;
+	    }
+	    break;
+	case 0x6000:
+	    // put the value nn into register Vx
+	    printf("6xnn - LD Vx, byte | Set Vx = nn\n");
+	    chip8->V[chip8->opcode & 0x0F00] = chip8->opcode & 0x00FF;
+	    break;
+	case 0x7000:
+	    // adds the value nn to the value of register Vx, then stores the result in Vx
+	    printf("7xnn - ADD Vx, byte | Set Vx = Vx + nn\n");
+	    chip8->V[chip8->opcode & 0x0F00] = (chip8->V[chip8->opcode & 0x0F00] + chip8->opcode & 0x00FF);
+	    break;
+	case 0x8:
 	    break;
     }
 
