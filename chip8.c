@@ -194,6 +194,42 @@ void emulateCycle(chip8_t *chip8) {
 	    chip8->V[chip8->opcode & 0x0F00] = (chip8->V[chip8->opcode & 0x0F00] + chip8->opcode & 0x00FF);
 	    break;
 	case 0x8:
+	    switch (chip8->opcode & 0x000F) {
+		case 0x0:
+		    // stores the value of register Vy in register Vx
+		    printf("8xy0 - LD Vx, Vy | Set Vx = Vy\n");
+		    chip8->V[chip8->opcode & 0x0F00] = chip8->V[chip8->opcode & 0x00F0];
+		    break;
+		case 0x1:
+		    // performs a bitwise OR on the values of Vx and Vy, then stores the result
+		    // in Vx. A bitwise OR compares the corresponding bits from two values,
+		    // and if either bit is 1, then the same bit in the result is also 1.
+		    // Otherwise, it is 0
+		    printf("8xy1 - OR Vx, Vy | Set Vx = Vx OR Vy\n");
+		    chip8->V[chip8->opcode & 0x0F00] |= chip8->V[chip8->opcode & 0x00F0];
+		    break;
+		case 0x2:
+		    // performs a bitwise AND on the values of Vx and Vy, then stores the result
+		    // in Vx. A bitwise AND compares the corresponding bits from two values,
+		    // and if both bit are 1, then the same bit in the result is also 1.
+		    // Otherwise, it is 0
+		    printf("8xy2 - AND Vx, Vy | Set Vx = Vx AND Vy\n");
+		    chip8->V[chip8->opcode & 0x0F00] &= chip8->V[chip8->opcode & 0x00F0];
+		    break;
+		case 0x3:
+		    // performs a bitwise exclusive OR on the values of Vx and Vy, then stores
+		    // the result in Vx. An exclusive OR compares the corresponding bits from two
+		    // values, and if the bits are not both the same, then the corresponding bit in
+		    // the result is set to 1. Otherwise, it is 0
+		    printf("8xy3 - XOR Vx, Vy | Set Vx = Vx XOR Vy\n");
+		    chip8->V[chip8->opcode & 0x0F00] ^= chip8->V[chip8->opcode & 0x00F0];
+		    break;
+		case 0x4:
+		    // the values of Vx and Vy are added together. If the result is greater than
+		    // 8 bits (> 255) VF is set to 1, otherwise 0. Only the lowest 8 bits of
+		    // the result are kept, and stored in Vx
+		    break;
+	    }
 	    break;
     }
 
