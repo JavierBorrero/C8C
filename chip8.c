@@ -191,10 +191,12 @@ void emulateCycle(chip8_t *chip8) {
 	case 0x7000:
 	    // adds the value nn to the value of register Vx, then stores the result in Vx
 	    printf("7xnn - ADD Vx, byte | Set Vx = Vx + nn\n");
-	    chip8->V[chip8->opcode & 0x0F00] = (chip8->V[chip8->opcode & 0x0F00] + chip8->opcode & 0x00FF);
+	    chip8->V[chip8->opcode & 0x0F00] += chip8->opcode & 0x00FF;
 	    break;
 	case 0x8:
 	    switch (chip8->opcode & 0x000F) {
+		// used for opcode 8xy4
+		unsigned char bitwise_op_result;
 		case 0x0:
 		    // stores the value of register Vy in register Vx
 		    printf("8xy0 - LD Vx, Vy | Set Vx = Vy\n");
@@ -228,6 +230,16 @@ void emulateCycle(chip8_t *chip8) {
 		    // the values of Vx and Vy are added together. If the result is greater than
 		    // 8 bits (> 255) VF is set to 1, otherwise 0. Only the lowest 8 bits of
 		    // the result are kept, and stored in Vx
+		    printf("8xy4 - ADD Vx, Vy | Set Vx = Vx + Vy, Set VF = carry\n");
+		    bitwise_op_result = chip8->V[chip8->opcode & 0x0F00] + chip8->V[chip8->opcode & 0x00F0];
+
+		    if(bitwise_op_result > 255) {
+			chip8->V[16] = 1;
+		    } else {
+			chip8->V[16] = 0;
+		    }
+
+		    chip8->V[chip8->opcode & 0x0F00] = bitwise_op_result & 0x000F; // only lowest 8 bits of the result are kept, and stored in Vx.
 		    break;
 	    }
 	    break;
