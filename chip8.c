@@ -241,6 +241,55 @@ void emulateCycle(chip8_t *chip8) {
 
 		    chip8->V[chip8->opcode & 0x0F00] = bitwise_op_result & 0x000F; // only lowest 8 bits of the result are kept, and stored in Vx.
 		    break;
+		case 0x5:
+		    // if Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted from
+		    // Vx, and the result is stored in Vx
+		    printf("8xy5 - SUB Vx, Vy | Set Vx = Vx - Vy, set VF = NOT borrow\n");
+		    if(chip8->V[chip8->opcode & 0x0F00] > chip8->V[chip8->opcode & 0x00F0]) {
+			chip8->V[16] = 1;
+		    } else {
+			chip8->V[16] = 0;
+		    }
+
+		    // Vy is subtracted from Vx, and the result is stored in Vx
+		    chip8->V[chip8->opcode & 0x0F00] -= chip8->V[chip8->opcode & 0x00F0];
+		    break;
+		case 0x6:
+		    // if the least significant bit of Vx is 1, then VF is set to 1, otherwise 0.
+		    // then Vx is divided by 2
+		    printf("8xy6 - SHR Vx {, Vy} | Set Vx = Vx SHR 1\n");
+		    if ((chip8->V[chip8->opcode & 0x0F00] & 0x0001) == 1) {
+			chip8->V[16] = 1;
+		    } else {
+			chip8->V[16] = 0;
+		    }
+		    // then Vx is divided by 2
+		    chip8->V[chip8->opcode & 0x0F00] /= 2;
+		    break;
+		case 0x7:
+		    // if Vy > Vx, then VF is set to 1, otherwise 0. Then Vx is subtracted from
+		    // Vy, and the result is stored in Vx
+		    printf("8xy7 - SUBN Vx, Vy | Set Vx = Vy - Vx, Set VF = NOT borrow\n");
+		    if (chip8->V[chip8->opcode & 0x00F0] > chip8->V[chip8->opcode & 0x0F00]) {
+			chip8->V[16] = 1;
+		    } else {
+			chip8->V[16] = 0;
+		    }
+		    // Vx is subtracted form Vy, and the result is stored in Vx
+		    chip8->V[chip8->opcode & 0x0F00] = chip8->V[chip8->opcode & 0x00F0] - chip8->V[chip8->opcode & 0x0F00];
+		    break;
+		case 0xE:
+		    // if the most significant bit of Vx is 1, then VF is set to 1, otherwise 0.
+		    // Then Vx is multiplied by 2
+		    printf("8xyE - SHL Vx {, Vy} | Set Vx = Vx SHL 1\n");
+		    if ((chip8->V[chip8->opcode & 0x0F00] & 0x1000) == 1) {
+			chip8->V[16] = 1;
+		    } else {
+			chip8->V[16] = 0;
+		    }
+
+		    chip8->V[chip8->opcode & 0x0F00] *= 2;
+		    break;
 	    }
 	    break;
     }
