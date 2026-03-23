@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "chip8.h"
 
 unsigned char sprites[80] = {
@@ -291,7 +292,73 @@ void emulateCycle(chip8_t *chip8) {
 		    chip8->V[chip8->opcode & 0x0F00] *= 2;
 		    break;
 	    }
+	case 0x9000:
+	    // the values of Vx and Vy are compared, and if they are not equal, 
+	    // the program counter is increased by 2
+	    printf("9xy0 - SNE Vx, Vy | Skip next instruction if Vx != Vy\n");
+	    if (chip8->V[chip8->opcode & 0x0F00] != chip8->V[chip8->opcode & 0x00F0]) {
+		chip8->PC += 2;
+	    }
 	    break;
+	case 0xA000:
+	    // the value of register I is set to nnn
+	    printf("Annn - LD I, addr | Set I = nnn\n");
+	    chip8->I = chip8->opcode & 0x0FFF;
+	    break;
+	case 0xB000:
+	    // the program counter is set to nnn plus the value of V0
+	    printf("Bnnn - JP V0, addr | Jump to location nnn + V0\n");
+	    chip8->PC = (chip8->opcode & 0x0FFF) + chip8->V[0];
+	    break;
+	case 0xC000:
+	    // the interpreter generates a random nunmber from 0 to 225, which is then ANDed with the value kk. The results are stored in Vx.
+	    printf("Cxkk - RND Vx, byte | Set Vx = random byte AND kk\n");
+	    // 0..225
+	    chip8->V[chip8->opcode & 0x0F00] = (rand() % 226) & (chip8->opcode & 0x00FF);
+	    break;
+	case 0xD000:
+	    // display
+	    break;
+	case 0xE:
+	    switch (chip8->opcode & 0x00FF) {
+		case 0x9E:
+		    // checks the keyboard, and if the key corresponding to the value of Vx is currently in the down position, PC is increased by 2
+		    break;
+		case 0xA1:
+		    // checks the keyboard, and if the key corresponding to the value of Vx is currently in the up position, PC is increased by 2
+		    break;
+	    }
+	    break;
+	case 0xF:
+	    switch (chip8->opcode & 0x00FF) {
+		case 0x07:
+		    // the value of DT is placed into Vx
+		    break;
+		case 0x0A:
+		    // all execution stops until a key is pressed, then the value of that key is stored in Vx
+		    break;
+		case 0x15:
+		    // DT is set equal to the value of Vx
+		    break;
+		case 0x18:
+		    // ST is set equal to the value of Vx
+		    break;
+		case 0x1E:
+		    // the values of I and Vx are added, and the results are stored in I
+		    break;
+		case 0x29:
+		    // the value of I is set to the location for the hexadecimal sprite corresponding to the value of Vx
+		    break;
+		case 0x33:
+		    // the interpreter takes the decimal value of Vx, and places the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2
+		    break;
+		case 0x55:
+		    // the interpreter copies the values of registers V0 through Vx into memory, starting at the address in I
+		    break;
+		case 0x65:
+		    // the interpreter reads values from memory starting at location I into registers V0 through Vx
+		    break;
+	    }
     }
 
 
