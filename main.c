@@ -1,10 +1,14 @@
 #include "chip8.h"
+#include <stdlib.h>
+#include <time.h>
 
 int main(void) {
     // setup render system and register input callbacks
     //setupGraphics();
     //setupInput();
     
+    srand(time(NULL));
+
     chip8_t chip8;
 
     // initialize chip8 and load the game
